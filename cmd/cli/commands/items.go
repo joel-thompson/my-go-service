@@ -31,11 +31,35 @@ var listItemsCmd = &cobra.Command{
 	RunE:  runListItems,
 }
 
+var getItemCmd = &cobra.Command{
+	Use:   "get",
+	Short: "Get a single item by ID",
+	Long:  "Retrieve a single item using its UUID",
+	RunE:  runGetItem,
+}
+
+var updateItemCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Update an existing item",
+	Long:  "Update an item's name and/or description",
+	RunE:  runUpdateItem,
+}
+
+var deleteItemCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "Delete an item",
+	Long:  "Delete an item by its UUID",
+	RunE:  runDeleteItem,
+}
+
 var (
 	itemName        string
 	itemDescription string
 	listLimit       int
 	listOffset      int
+	itemID          string
+	updateName      string
+	updateDesc      string
 )
 
 func init() {
@@ -48,9 +72,26 @@ func init() {
 	listItemsCmd.Flags().IntVar(&listLimit, "limit", 10, "Number of items to retrieve (max 100)")
 	listItemsCmd.Flags().IntVar(&listOffset, "offset", 0, "Number of items to skip")
 
+	// Add flags for get command
+	getItemCmd.Flags().StringVar(&itemID, "id", "", "Item ID (required)")
+	getItemCmd.MarkFlagRequired("id")
+
+	// Add flags for update command
+	updateItemCmd.Flags().StringVar(&itemID, "id", "", "Item ID (required)")
+	updateItemCmd.Flags().StringVar(&updateName, "name", "", "New item name")
+	updateItemCmd.Flags().StringVar(&updateDesc, "description", "", "New item description")
+	updateItemCmd.MarkFlagRequired("id")
+
+	// Add flags for delete command
+	deleteItemCmd.Flags().StringVar(&itemID, "id", "", "Item ID (required)")
+	deleteItemCmd.MarkFlagRequired("id")
+
 	// Add subcommands to items
 	itemsCmd.AddCommand(createItemCmd)
 	itemsCmd.AddCommand(listItemsCmd)
+	itemsCmd.AddCommand(getItemCmd)
+	itemsCmd.AddCommand(updateItemCmd)
+	itemsCmd.AddCommand(deleteItemCmd)
 }
 
 func runCreateItem(cmd *cobra.Command, args []string) error {
@@ -203,6 +244,231 @@ func runListItems(cmd *cobra.Command, args []string) error {
 		nextOffset := response.Offset + response.Limit
 		if nextOffset < response.Total {
 			fmt.Printf("💡 To see more items, use: --offset %d\n", nextOffset)
+		}
+	}
+
+	return nil
+}
+
+func runGetItem(cmd *cobra.Command, args []string) error {
+	url := fmt.Sprintf("%s/items/%s", serverURL, itemID)
+	verboseLog(fmt.Sprintf("Making GET request to: %s", url))
+
+	// Make HTTP request
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Printf("❌ Cannot connect to API server at %s\n", serverURL)
+		if verbose {
+			fmt.Printf("Error: %v\n", err)
+		}
+		fmt.Println("💡 Make sure the server is running with: ./do start")
+		return nil
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	verboseLog(fmt.Sprintf("Response status: %s", resp.Status))
+
+	if format == "json" {
+		fmt.Println(string(body))
+		return nil
+	}
+
+	// Check response status
+	if resp.StatusCode == http.StatusNotFound {
+		fmt.Printf("❌ Item not found (ID: %s)\n", itemID)
+		return nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("❌ Failed to get item (status: %s)\n", resp.Status)
+		if verbose {
+			fmt.Printf("Response: %s\n", string(body))
+		}
+		return nil
+	}
+
+	// Pretty format
+	var item storage.Item
+	if err := json.Unmarshal(body, &item); err != nil {
+		fmt.Printf("❌ API returned invalid response (not JSON)\n")
+		if verbose {
+			fmt.Printf("Response: %s\n", string(body))
+		}
+		return nil
+	}
+
+	fmt.Printf("📄 Item Details\n")
+	fmt.Printf("   ID: %s\n", item.ID)
+	fmt.Printf("   Name: %s\n", item.Name)
+	if item.Description != nil {
+		fmt.Printf("   Description: %s\n", *item.Description)
+	} else {
+		fmt.Printf("   Description: (none)\n")
+	}
+	fmt.Printf("   Created: %s\n", item.CreatedAt.Format("2006-01-02 15:04:05"))
+	fmt.Printf("   Updated: %s\n", item.UpdatedAt.Format("2006-01-02 15:04:05"))
+
+	return nil
+}
+
+func runUpdateItem(cmd *cobra.Command, args []string) error {
+	// Build update request
+	reqData := make(map[string]interface{})
+	if updateName != "" {
+		reqData["name"] = updateName
+	}
+	if updateDesc != "" {
+		reqData["description"] = updateDesc
+	}
+
+	// Check if at least one field is being updated
+	if len(reqData) == 0 {
+		fmt.Println("❌ At least one field (--name or --description) must be provided for update")
+		return nil
+	}
+
+	jsonData, err := json.Marshal(reqData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/items/%s", serverURL, itemID)
+	verboseLog(fmt.Sprintf("Making PUT request to: %s", url))
+	verboseLog(fmt.Sprintf("Request body: %s", string(jsonData)))
+
+	// Create PUT request
+	client := &http.Client{}
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("❌ Cannot connect to API server at %s\n", serverURL)
+		if verbose {
+			fmt.Printf("Error: %v\n", err)
+		}
+		fmt.Println("💡 Make sure the server is running with: ./do start")
+		return nil
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	verboseLog(fmt.Sprintf("Response status: %s", resp.Status))
+
+	if format == "json" {
+		fmt.Println(string(body))
+		return nil
+	}
+
+	// Check response status
+	if resp.StatusCode == http.StatusNotFound {
+		fmt.Printf("❌ Item not found (ID: %s)\n", itemID)
+		return nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("❌ Failed to update item (status: %s)\n", resp.Status)
+		if verbose {
+			fmt.Printf("Response: %s\n", string(body))
+		}
+		return nil
+	}
+
+	// Pretty format
+	var item storage.Item
+	if err := json.Unmarshal(body, &item); err != nil {
+		fmt.Printf("❌ API returned invalid response (not JSON)\n")
+		if verbose {
+			fmt.Printf("Response: %s\n", string(body))
+		}
+		return nil
+	}
+
+	fmt.Printf("✅ Item updated successfully!\n")
+	fmt.Printf("   ID: %s\n", item.ID)
+	fmt.Printf("   Name: %s\n", item.Name)
+	if item.Description != nil {
+		fmt.Printf("   Description: %s\n", *item.Description)
+	}
+	fmt.Printf("   Updated: %s\n", item.UpdatedAt.Format("2006-01-02 15:04:05"))
+
+	return nil
+}
+
+func runDeleteItem(cmd *cobra.Command, args []string) error {
+	url := fmt.Sprintf("%s/items/%s", serverURL, itemID)
+	verboseLog(fmt.Sprintf("Making DELETE request to: %s", url))
+
+	// Create DELETE request
+	client := &http.Client{}
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("❌ Cannot connect to API server at %s\n", serverURL)
+		if verbose {
+			fmt.Printf("Error: %v\n", err)
+		}
+		fmt.Println("💡 Make sure the server is running with: ./do start")
+		return nil
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	verboseLog(fmt.Sprintf("Response status: %s", resp.Status))
+
+	if format == "json" {
+		fmt.Println(string(body))
+		return nil
+	}
+
+	// Check response status
+	if resp.StatusCode == http.StatusNotFound {
+		fmt.Printf("❌ Item not found (ID: %s)\n", itemID)
+		return nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("❌ Failed to delete item (status: %s)\n", resp.Status)
+		if verbose {
+			fmt.Printf("Response: %s\n", string(body))
+		}
+		return nil
+	}
+
+	// Pretty format
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		fmt.Printf("❌ API returned invalid response (not JSON)\n")
+		if verbose {
+			fmt.Printf("Response: %s\n", string(body))
+		}
+		return nil
+	}
+
+	fmt.Printf("✅ Item deleted successfully!\n")
+	if item, ok := response["item"].(map[string]interface{}); ok {
+		if name, ok := item["name"].(string); ok {
+			fmt.Printf("   Deleted: %s (ID: %s)\n", name, itemID)
 		}
 	}
 

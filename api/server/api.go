@@ -43,6 +43,9 @@ func (a *API) SetupRoutes() *gin.Engine {
 	// Items endpoints
 	router.POST("/items", a.handleCreateItem)
 	router.GET("/items", a.handleListItems)
+	router.GET("/items/:id", a.handleGetItem)
+	router.PUT("/items/:id", a.handleUpdateItem)
+	router.DELETE("/items/:id", a.handleDeleteItem)
 
 	return router
 }

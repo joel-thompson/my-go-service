@@ -34,6 +34,9 @@ docker compose up -d
 | GET    | `/hello`  | Hello world |  
 | POST   | `/items`  | Create item |
 | GET    | `/items`  | List items with pagination |
+| GET    | `/items/:id` | Get single item by ID |
+| PUT    | `/items/:id` | Update existing item |
+| DELETE | `/items/:id` | Delete item |
 
 ### CLI Testing Tool
 
@@ -46,8 +49,13 @@ Build and use the CLI for easy API testing:
 # Test endpoints
 ./bin/mycli health
 ./bin/mycli hello
+
+# Items CRUD operations
 ./bin/mycli items create --name "Test Item" --description "My item"
 ./bin/mycli items list
+./bin/mycli items get --id <item-id>
+./bin/mycli items update --id <item-id> --name "Updated Name"
+./bin/mycli items delete --id <item-id>
 
 # Pagination
 ./bin/mycli items list --limit 5 --offset 10

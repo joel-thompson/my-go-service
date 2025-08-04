@@ -20,6 +20,12 @@ type CreateItemRequest struct {
 	Description *string `json:"description"`
 }
 
+// UpdateItemRequest represents the request payload for updating an item
+type UpdateItemRequest struct {
+	Name        *string `json:"name,omitempty"`
+	Description *string `json:"description,omitempty"`
+}
+
 // ListItemsRequest represents pagination parameters for listing items
 type ListItemsRequest struct {
 	Limit  int `form:"limit" json:"limit"`
@@ -38,6 +44,27 @@ const (
 	createItemQuery = `
 		INSERT INTO items (name, description)
 		VALUES ($1, $2)
+		RETURNING id, name, description, created_at, updated_at
+	`
+
+	getItemQuery = `
+		SELECT id, name, description, created_at, updated_at
+		FROM items
+		WHERE id = $1
+	`
+
+	updateItemQuery = `
+		UPDATE items
+		SET name = COALESCE($2, name),
+			description = COALESCE($3, description),
+			updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, name, description, created_at, updated_at
+	`
+
+	deleteItemQuery = `
+		DELETE FROM items
+		WHERE id = $1
 		RETURNING id, name, description, created_at, updated_at
 	`
 

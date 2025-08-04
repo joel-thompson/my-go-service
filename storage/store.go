@@ -2,7 +2,10 @@ package storage
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -61,4 +64,43 @@ func (s *Store) ListItems(ctx context.Context, req ListItemsRequest) (*ListItems
 		Limit:  req.Limit,
 		Offset: req.Offset,
 	}, nil
+}
+
+// GetItem retrieves a single item by ID
+func (s *Store) GetItem(ctx context.Context, id uuid.UUID) (*Item, error) {
+	var item Item
+	err := s.db.GetContext(ctx, &item, getItemQuery, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("item not found")
+		}
+		return nil, err
+	}
+	return &item, nil
+}
+
+// UpdateItem updates an existing item
+func (s *Store) UpdateItem(ctx context.Context, id uuid.UUID, req UpdateItemRequest) (*Item, error) {
+	var item Item
+	err := s.db.GetContext(ctx, &item, updateItemQuery, id, req.Name, req.Description)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("item not found")
+		}
+		return nil, err
+	}
+	return &item, nil
+}
+
+// DeleteItem deletes an item by ID
+func (s *Store) DeleteItem(ctx context.Context, id uuid.UUID) (*Item, error) {
+	var item Item
+	err := s.db.GetContext(ctx, &item, deleteItemQuery, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("item not found")
+		}
+		return nil, err
+	}
+	return &item, nil
 }
