@@ -20,10 +20,36 @@ type CreateItemRequest struct {
 	Description *string `json:"description"`
 }
 
+// ListItemsRequest represents pagination parameters for listing items
+type ListItemsRequest struct {
+	Limit  int `form:"limit" json:"limit"`
+	Offset int `form:"offset" json:"offset"`
+}
+
+// ListItemsResponse represents the response for listing items
+type ListItemsResponse struct {
+	Items  []Item `json:"items"`
+	Total  int    `json:"total"`
+	Limit  int    `json:"limit"`
+	Offset int    `json:"offset"`
+}
+
 const (
 	createItemQuery = `
 		INSERT INTO items (name, description)
 		VALUES ($1, $2)
 		RETURNING id, name, description, created_at, updated_at
+	`
+
+	listItemsQuery = `
+		SELECT id, name, description, created_at, updated_at
+		FROM items
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+
+	countItemsQuery = `
+		SELECT COUNT(*)
+		FROM items
 	`
 )

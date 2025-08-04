@@ -33,6 +33,7 @@ docker compose up -d
 | GET    | `/health` | Health check |
 | GET    | `/hello`  | Hello world |  
 | POST   | `/items`  | Create item |
+| GET    | `/items`  | List items with pagination |
 
 ### CLI Testing Tool
 
@@ -46,12 +47,16 @@ Build and use the CLI for easy API testing:
 ./bin/mycli health
 ./bin/mycli hello
 ./bin/mycli items create --name "Test Item" --description "My item"
+./bin/mycli items list
+
+# Pagination
+./bin/mycli items list --limit 5 --offset 10
 
 # Custom server URL
 ./bin/mycli --url http://localhost:8080 health
 
 # JSON output
-./bin/mycli --format json items create --name "Test"
+./bin/mycli --format json items list
 
 # Verbose mode
 ./bin/mycli -v items create --name "Debug Item"

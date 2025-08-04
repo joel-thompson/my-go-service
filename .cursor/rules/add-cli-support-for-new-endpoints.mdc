@@ -1,0 +1,44 @@
+---
+alwaysApply: true
+---
+
+# Rule: api-cli-consistency
+## Description
+Whenever a new API endpoint is added, ensure complete CLI support is implemented to maintain consistency between API and CLI interfaces.
+
+## When adding new API endpoints:
+
+### API Side:
+1. Add handler function following naming pattern: `handleVerbNoun`
+2. Add route in `api/server/api.go` with appropriate HTTP method
+3. Use consistent error handling and JSON responses
+4. Add structured logging for the endpoint
+
+### CLI Side:
+1. Create new command file in `cmd/cli/commands/` if needed
+2. Add command to appropriate parent command (items, users, etc.)
+3. Implement consistent error handling pattern:
+   - Handle connection errors with friendly messages
+   - Validate HTTP status before JSON parsing
+   - Support `--format json` and pretty output
+   - Include verbose mode with `-v` flag
+4. Add proper help text and usage examples
+5. Test both success and failure scenarios
+
+### Documentation:
+1. Update README.md with new endpoint and CLI command
+2. Add request/response examples
+3. Update API documentation section
+
+### Testing:
+1. Test the new endpoint manually
+2. Test the new CLI command with server running and stopped
+3. Verify error handling works correctly
+
+## Example Implementation:
+```bash
+# API: POST /items
+# CLI: mycli items create --name "Test" --description "Desc"
+```
+
+This rule ensures that every API endpoint has a corresponding CLI command with consistent patterns and user experience.

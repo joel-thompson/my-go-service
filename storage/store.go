@@ -27,3 +27,38 @@ func (s *Store) CreateItem(ctx context.Context, req CreateItemRequest) (*Item, e
 	}
 	return &item, nil
 }
+
+// ListItems retrieves a paginated list of items from the database
+func (s *Store) ListItems(ctx context.Context, req ListItemsRequest) (*ListItemsResponse, error) {
+	// Set default values for pagination
+	if req.Limit <= 0 {
+		req.Limit = 10 // Default to 10 items per page
+	}
+	if req.Limit > 100 {
+		req.Limit = 100 // Maximum 100 items per page
+	}
+	if req.Offset < 0 {
+		req.Offset = 0
+	}
+
+	// Get total count
+	var total int
+	err := s.db.GetContext(ctx, &total, countItemsQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get items
+	var items []Item
+	err = s.db.SelectContext(ctx, &items, listItemsQuery, req.Limit, req.Offset)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ListItemsResponse{
+		Items:  items,
+		Total:  total,
+		Limit:  req.Limit,
+		Offset: req.Offset,
+	}, nil
+}

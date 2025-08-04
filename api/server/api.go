@@ -42,6 +42,7 @@ func (a *API) SetupRoutes() *gin.Engine {
 
 	// Items endpoints
 	router.POST("/items", a.handleCreateItem)
+	router.GET("/items", a.handleListItems)
 
 	return router
 }
