@@ -1,0 +1,58 @@
+---
+alwaysApply: true
+---
+
+# Rule: update-architecture-doc
+## Description
+The architecture.md file must be kept up-to-date whenever structural or architectural changes are made to the codebase. This ensures the documentation remains accurate for learning and onboarding purposes.
+
+## When to update architecture.md:
+
+### New Components:
+1. **New packages/directories**: Add to project structure section with purpose and role
+2. **New entry points**: Document in core components section
+3. **New storage layer changes**: Update data models and query sections
+4. **New middleware**: Document in HTTP layer section
+5. **New CLI commands**: Update CLI command structure explanation
+
+### Architectural Changes:
+1. **Design pattern changes**: Update architectural patterns section
+2. **Technology additions**: Add to technology choices with rationale
+3. **Data flow modifications**: Update data flow diagrams and explanations
+4. **Configuration changes**: Update configuration section
+5. **Database schema changes**: Update database layer section
+
+### File Structure Changes:
+1. **New directories**: Add to project structure tree and explain purpose
+2. **Moved files**: Update file locations and references
+3. **Renamed components**: Update all references throughout the document
+4. **Deleted components**: Remove from documentation and update dependencies
+
+### Content Updates Required:
+1. **Project Structure Tree**: Keep the ASCII tree current with actual structure
+2. **Component Descriptions**: Ensure all files/directories are explained
+3. **Data Flow Sections**: Update if request/response flow changes
+4. **Extension Points**: Update guidance for adding new features
+5. **Examples**: Keep code examples current with actual implementation
+
+### Documentation Standards:
+1. **Be Learning-Focused**: Explain not just what but why components exist
+2. **Include Trade-offs**: Document architectural decisions and alternatives
+3. **Maintain Consistency**: Use consistent terminology throughout
+4. **Add Context**: Explain how components interact with each other
+5. **Update Cross-References**: Ensure internal links and references are accurate
+
+## Example Updates:
+```markdown
+# When adding new CLI command:
+- Update cmd/cli/ section in architecture.md
+- Add to CLI command flow explanation
+- Update extension points for adding commands
+
+# When adding new storage method:
+- Update storage layer section
+- Add to data models if new structs
+- Update data flow if pattern changes
+```
+
+This rule ensures the architecture documentation remains a valuable learning resource that accurately reflects the current state of the codebase.

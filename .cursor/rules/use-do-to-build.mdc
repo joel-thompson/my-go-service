@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+When building the service or the cli, use the `do` script to build.
+- `./do build` to build the service
+- `./do build-cli` to build the cli
