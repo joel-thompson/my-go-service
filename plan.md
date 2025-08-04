@@ -26,10 +26,17 @@ This document outlines the plan for creating a Go backend service that mirrors t
 ```
 my-go-service/
 ├── cmd/
-│   └── server/
-│       ├── main.go              # Application entry point
-│       └── setup/
-│           └── setup.go         # Dependency injection and app initialization
+│   ├── server/
+│   │   ├── main.go              # API server entry point
+│   │   └── setup/
+│   │       └── setup.go         # Dependency injection and app initialization
+│   └── cli/
+│       ├── main.go              # CLI testing tool entry point
+│       └── commands/
+│           ├── root.go          # Root command and global flags
+│           ├── health.go        # Health check command
+│           ├── hello.go         # Hello endpoint command
+│           └── items.go         # Items management commands
 ├── api/
 │   └── server/
 │       ├── api.go              # Router setup and API struct
@@ -60,6 +67,8 @@ my-go-service/
 - **Configuration**: `github.com/sethvargo/go-envconfig` - Environment variable parsing
 - **Logging**: `log/slog` - Go's built-in structured logging
 - **Database Migrations**: `golang-migrate/migrate` - Database schema versioning
+- **CLI Framework**: `github.com/spf13/cobra` - Modern CLI framework with subcommands
+- **CLI Configuration**: `github.com/spf13/viper` - Configuration management for CLI
 
 ### Development Tools
 - **Database**: PostgreSQL 15 (via Docker)
@@ -87,6 +96,43 @@ my-go-service/
 - **Endpoint**: `GET /items` (future)
 - **Purpose**: List items with pagination
 - **Response**: `{"items": [...], "total": number}`
+
+## CLI Testing Tool
+
+### Purpose
+A Go-based CLI application for testing API endpoints during development. This provides a convenient alternative to curl commands and serves as living documentation for the API.
+
+### Commands Structure
+```bash
+# Health check
+./mycli health
+
+# Hello endpoint  
+./mycli hello
+
+# Items management
+./mycli items create --name "Test Item" --description "A test item"
+./mycli items list
+./mycli items get --id <uuid>
+
+# Global flags
+./mycli --url http://localhost:8080 health
+./mycli --format json items list
+./mycli --verbose items create --name "Test"
+```
+
+### Features
+- **Subcommands**: Each API endpoint has corresponding CLI command
+- **Global Flags**: Custom server URL, output format, verbose logging
+- **Structured Output**: JSON and human-readable formats
+- **Error Handling**: Clear error messages and exit codes
+- **Auto-completion**: Bash/Zsh completion scripts (future)
+
+### Build Commands
+```bash
+go build -o bin/mycli ./cmd/cli      # Build CLI tool
+./bin/mycli --help                   # Show usage
+```
 
 ## Database Schema
 
@@ -130,6 +176,7 @@ Environment variables:
 ./do test           # Run tests
 ./do lint           # Run linter
 ./do build          # Build binaries
+./do build-cli      # Build CLI tool
 ./do migrate-down   # Rollback migrations
 ```
 
@@ -156,6 +203,14 @@ docker compose up -d    # Start PostgreSQL
 3. Create storage layer (Store struct)
 4. Implement items database model
 5. Add POST /items endpoint
+
+### Phase 2.5: CLI Testing Tool
+1. Set up Cobra CLI framework
+2. Create root command with global flags
+3. Implement health and hello commands
+4. Add items management commands
+5. Add structured output formatting
+6. Update build scripts
 
 ### Phase 3: Enhancement
 1. Add GET /items endpoint with pagination
@@ -185,6 +240,13 @@ docker compose up -d    # Start PostgreSQL
 - Database migrations
 - HTTP middleware
 - Structured logging
+
+### CLI Development Patterns
+- Command-line argument parsing
+- Subcommand architecture with Cobra
+- HTTP client implementation
+- Structured output formatting
+- Configuration management for CLI tools
 
 ### Development Practices
 - Local development environment setup

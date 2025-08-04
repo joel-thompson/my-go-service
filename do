@@ -11,7 +11,9 @@ case "$1" in
   
   start)
     echo "Starting API server..."
-    export DATABASE_URL="postgres://postgres:postgres@localhost:5433/mygoservice?sslmode=disable"
+    if [ -f .env ]; then
+      export $(cat .env | grep -v '^#' | xargs)
+    fi
     go run ./cmd/server
     ;;
   
@@ -35,6 +37,11 @@ case "$1" in
   build)
     echo "Building application..."
     go build -o bin/server ./cmd/server
+    ;;
+  
+  build-cli)
+    echo "Building CLI tool..."
+    go build -o bin/mycli ./cmd/cli
     ;;
   
   lint)
