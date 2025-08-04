@@ -46,3 +46,4 @@ tmp/
 temp/
 
 # Build artifacts
+bin/
