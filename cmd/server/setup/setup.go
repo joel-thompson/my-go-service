@@ -2,6 +2,8 @@ package setup
 
 import (
 	"context"
+	"errors"
+	"io"
 	"log/slog"
 	"os"
 
@@ -15,13 +17,15 @@ type Config struct {
 	ServerAddr  string `env:"SERVER_ADDR,default=:8080"`
 	DatabaseURL string `env:"DATABASE_URL,required"`
 	LogLevel    string `env:"LOG_LEVEL,default=info"`
+	LogFile     string `env:"LOG_FILE"`
 }
 
 // App holds all dependencies for the application
 type App struct {
-	Config *Config
-	Logger *slog.Logger
-	DB     *sqlx.DB
+	Config  *Config
+	logFile *os.File
+	Logger  *slog.Logger
+	DB      *sqlx.DB
 }
 
 // NewApp creates a new application instance with all dependencies
@@ -47,7 +51,20 @@ func NewApp(ctx context.Context) (*App, error) {
 		logLevel = slog.LevelInfo
 	}
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	var writer io.Writer = os.Stdout
+	var logFile *os.File
+
+	if config.LogFile != "" {
+		var err error
+		logFile, err = os.OpenFile(config.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			return nil, err
+		}
+
+		writer = io.MultiWriter(os.Stdout, logFile)
+	}
+
+	logger := slog.New(slog.NewJSONHandler(writer, &slog.HandlerOptions{
 		Level: logLevel,
 	}))
 
@@ -60,16 +77,28 @@ func NewApp(ctx context.Context) (*App, error) {
 	logger.Info("Connected to database")
 
 	return &App{
-		Config: &config,
-		Logger: logger,
-		DB:     db,
+		Config:  &config,
+		Logger:  logger,
+		DB:      db,
+		logFile: logFile,
 	}, nil
 }
 
 // Close cleans up application resources
 func (a *App) Close() error {
-	if a.DB != nil {
-		return a.DB.Close()
+
+	var errs []error
+
+	if a.logFile != nil {
+		if err := a.logFile.Close(); err != nil {
+			errs = append(errs, err)
+		}
 	}
-	return nil
+	if a.DB != nil {
+		if err := a.DB.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return errors.Join(errs...)
 }
